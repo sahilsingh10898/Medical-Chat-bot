@@ -229,7 +229,7 @@ def process_symptom_files(input_folder: str, output_folder: str):
             df.to_csv(os.path.join(output_folder, output_filename), index=False)
             print(f" Saved: {output_filename}")
         except Exception as e:
-            print(f"🚨 Error in {file_name}: {e}")
+            print(f" Error in {file_name}: {e}")
 
     print("\n All files processed!")
 
