@@ -1,0 +1,188 @@
+version: v2
+
+description: Nebula KG Import for Medical Dataset
+
+clientSettings:
+  retry: 3
+  concurrency: 10
+  channelBufferSize: 128
+  space: medkg
+  connection:
+    user: root
+    password: nebula
+    address: ["127.0.0.1:9669"]
+
+logPath: ./logs/ng_import.log
+
+files:
+  - path: "{{ base_dir }}/patient_cases.csv"
+    failDataPath: "./logs/patient_cases_fail.csv"
+    batchSize: 256
+    type: csv
+    csv:
+      withHeader: true
+      delimiter: ","
+    schema:
+      type: vertex
+      vertex:
+        tag: Case
+        vid:
+          index: 0
+          type: string
+        props:
+          - name: case_id
+            type: string
+          - name: patient_age
+            type: int
+          - name: gender
+            type: string
+          - name: visit
+            type: string
+
+  - path: "{{ base_dir }}/symptoms.csv"
+    failDataPath: "./logs/symptoms_fail.csv"
+    batchSize: 256
+    type: csv
+    csv:
+      withHeader: true
+      delimiter: ","
+    schema:
+      type: vertex
+      vertex:
+        tag: Symptom
+        vid:
+          index: 0
+          type: string
+        props:
+          - name: name
+            type: string
+
+  - path: "{{ base_dir }}/diseases.csv"
+    failDataPath: "./logs/diseases_fail.csv"
+    batchSize: 256
+    type: csv
+    csv:
+      withHeader: true
+      delimiter: ","
+    schema:
+      type: vertex
+      vertex:
+        tag: Disease
+        vid:
+          index: 0
+          type: string
+        props:
+          - name: name
+            type: string
+
+  - path: "{{ base_dir }}/medicines.csv"
+    failDataPath: "./logs/medicines_fail.csv"
+    batchSize: 256
+    type: csv
+    csv:
+      withHeader: true
+      delimiter: ","
+    schema:
+      type: vertex
+      vertex:
+        tag: Medicine
+        vid:
+          index: 0
+          type: string
+        props:
+          - name: name
+            type: string
+
+  - path: "{{ base_dir }}/tests.csv"
+    failDataPath: "./logs/tests_fail.csv"
+    batchSize: 256
+    type: csv
+    csv:
+      withHeader: true
+      delimiter: ","
+    schema:
+      type: vertex
+      vertex:
+        tag: Test
+        vid:
+          index: 0
+          type: string
+        props:
+          - name: name
+            type: string
+
+  - path: "{{ base_dir }}/has_symptom.csv"
+    failDataPath: "./logs/has_symptom_fail.csv"
+    batchSize: 256
+    type: csv
+    csv:
+      withHeader: true
+      delimiter: ","
+    schema:
+      type: edge
+      edge:
+        name: HAS_SYMPTOM
+        withRanking: false
+        srcVID:
+          index: 0
+          type: string
+        dstVID:
+          index: 1
+          type: string
+
+  - path: "{{ base_dir }}/has_diagnosis.csv"
+    failDataPath: "./logs/has_diagnosis_fail.csv"
+    batchSize: 256
+    type: csv
+    csv:
+      withHeader: true
+      delimiter: ","
+    schema:
+      type: edge
+      edge:
+        name: HAS_DIAGNOSIS
+        withRanking: false
+        srcVID:
+          index: 0
+          type: string
+        dstVID:
+          index: 1
+          type: string
+
+  - path: "{{ base_dir }}/treated_with.csv"
+    failDataPath: "./logs/treated_with_fail.csv"
+    batchSize: 256
+    type: csv
+    csv:
+      withHeader: true
+      delimiter: ","
+    schema:
+      type: edge
+      edge:
+        name: TREATED_WITH
+        withRanking: false
+        srcVID:
+          index: 0
+          type: string
+        dstVID:
+          index: 1
+          type: string
+
+  - path: "{{ base_dir }}/underwent_test.csv"
+    failDataPath: "./logs/underwent_test_fail.csv"
+    batchSize: 256
+    type: csv
+    csv:
+      withHeader: true
+      delimiter: ","
+    schema:
+      type: edge
+      edge:
+        name: UNDERWENT_TEST
+        withRanking: false
+        srcVID:
+          index: 0
+          type: string
+        dstVID:
+          index: 1
+          type: string
