@@ -1,0 +1,9 @@
+pandas
+numpy
+tqdm
+transformers
+torch
+beautifulsoup4
+huggingface_hub
+scikit-learn
+nebula3-python

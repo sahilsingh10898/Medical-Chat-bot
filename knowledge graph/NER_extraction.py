@@ -235,13 +235,18 @@ def process_symptom_files(input_folder: str, output_folder: str):
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Run NER-based symptom extraction")
+    parser.add_argument("--input_folder", required=True, help="Input folder with cleaned CSVs")
+    parser.add_argument("--output_folder", required=True, help="Output folder for NER-cleaned files")
+    parser.add_argument("--hf_token", type=str, default=None, help="Hugging Face token (optional)")
 
-    access_token = os.getenv("HF_TOKEN")
+    args = parser.parse_args()
 
+    access_token = args.hf_token or os.getenv("HF_TOKEN")
     authenticate_huggingface(access_token)
 
     ner = load_biomedical_ner_model()
     process_symptom_files(
-        input_folder="/content/drive/MyDrive/Datasets/hardoi_cleaned_step1",
-        output_folder="/content/drive/MyDrive/Datasets/hardoi_cleaned_final",
+        input_folder=args.input_folder,
+        output_folder=args.output_folder,
     )

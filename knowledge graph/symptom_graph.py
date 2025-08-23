@@ -153,7 +153,7 @@ def extract_symptom_kg(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
     return symptoms_df, has_symptom_df
 
 def process_file_to_kg(input_path: Path, out_root: Path):
-    print(f"\n📄 Processing file: {input_path.name}")
+    print(f"\n Processing file: {input_path.name}")
     df = robust_read_csv(input_path)
 
     # Detect available columns

@@ -1,4 +1,15 @@
+from pathlib import Path
+
 def run_all_stages(input_raw, stage1_out, stage2_out, kg_out, nebula=False):
+    # Validate input folder exists
+    if not Path(input_raw).exists():
+        raise FileNotFoundError(f"Input folder does not exist: {input_raw}")
+    
+    # Ensure output folders exist
+    Path(stage1_out).mkdir(parents=True, exist_ok=True)
+    Path(stage2_out).mkdir(parents=True, exist_ok=True)
+    Path(kg_out).mkdir(parents=True, exist_ok=True)
+
     print("\n[Stage 1] Cleaning raw CSV files...")
     run_cleaning_process(input_raw, stage1_out)
 
@@ -13,21 +24,3 @@ def run_all_stages(input_raw, stage1_out, stage2_out, kg_out, nebula=False):
         ingest_to_nebula_from_csv(csv_dir=kg_out)
 
     print("\n✅ All stages completed.")
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Run Clinical KG Pipeline")
-    parser.add_argument("--input_raw", required=True, help="Raw CSV input folder")
-    parser.add_argument("--stage1_out", required=True, help="Output for cleaned step 1")
-    parser.add_argument("--stage2_out", required=True, help="Output for cleaned + symptoms")
-    parser.add_argument("--kg_out", required=True, help="Final KG CSV output folder")
-    parser.add_argument("--nebula", action="store_true", help="Ingest into NebulaGraph")
-
-    args = parser.parse_args()
-
-    run_all_stages(
-        input_raw=args.input_raw,
-        stage1_out=args.stage1_out,
-        stage2_out=args.stage2_out,
-        kg_out=args.kg_out,
-        nebula=args.nebula
-    )
