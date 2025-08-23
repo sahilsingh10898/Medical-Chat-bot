@@ -1,42 +1,88 @@
-CREATE SPACE IF NOT EXISTS medkg (vid_type = FIXED_STRING(128));
-USE medkg;
 
-CREATE TAG IF NOT EXISTS PatientCase (
-  case_id STRING,
-  patient_age INT,
-  gender STRING,
-  visit STRING
+
+CREATE SPACE IF NOT EXISTS medkg (
+  vid_type = FIXED_STRING(128),
+  partition_num = 9,
+  replica_factor = 1
 );
 
+USE medkg;
+
+
+CREATE TAG IF NOT EXISTS PatientCase (
+  id_no string,
+  visit string,
+  gender string,
+  age string,
+  date_of_exam string,
+  missing_fields string
+);
+
+-- Symptom entity (minimal fields)
 CREATE TAG IF NOT EXISTS Symptom (
-  name STRING
+  name string,
+  concept_id string
 );
 
 CREATE TAG IF NOT EXISTS Disease (
-  name STRING
+  name string,
+  prior_prevalence double
 );
 
-CREATE TAG IF NOT EXISTS Medication (
-  name STRING
-);
-
+-- Medical test node
 CREATE TAG IF NOT EXISTS Test (
-  name STRING
+  name string,
+  kind string
 );
 
-CREATE EDGE IF NOT EXISTS HAS_SYMPTOM ();
-CREATE EDGE IF NOT EXISTS HAS_DIAGNOSIS ();
+-- Medication node
+CREATE TAG IF NOT EXISTS Medicine (
+  name string
+);
+
+-- Optional embedding node
+CREATE TAG IF NOT EXISTS SymptomEmbedding (
+  model string,
+  dim int,
+  vector_id string
+);
+
+CREATE EDGE IF NOT EXISTS HAS_SYMPTOM (
+  duration string,
+  negated bool,
+  certainty string,
+  onset_offset_days int
+);
+
+-- Disease diagnosed from case
+CREATE EDGE IF NOT EXISTS HAS_DIAGNOSIS (
+  confidence double
+);
+
+-- Test that was performed
+CREATE EDGE IF NOT EXISTS UNDERWENT_TEST (
+  value string,
+  unit string,
+  source string
+);
+
 CREATE EDGE IF NOT EXISTS TREATED_WITH ();
-CREATE EDGE IF NOT EXISTS UNDERWENT_TEST ();
 
-CREATE TAG INDEX idx_patient_case_case_id ON PatientCase(case_id);
-CREATE TAG INDEX idx_symptom_name ON Symptom(name);
-CREATE TAG INDEX idx_disease_name ON Disease(name);
-CREATE TAG INDEX idx_medicine_name ON Medication(name);
-CREATE TAG INDEX idx_test_name ON Test(name);
 
-REBUILD TAG INDEX idx_patient_case_case_id;
-REBUILD TAG INDEX idx_symptom_name;
-REBUILD TAG INDEX idx_disease_name;
-REBUILD TAG INDEX idx_medicine_name;
-REBUILD TAG INDEX idx_test_name;
+CREATE EDGE IF NOT EXISTS EMBED_OF ();
+
+
+CREATE TAG INDEX IF NOT EXISTS idx_patient_idno     ON PatientCase(id_no);
+CREATE TAG INDEX IF NOT EXISTS idx_symptom_name     ON Symptom(name);
+CREATE TAG INDEX IF NOT EXISTS idx_symptom_concept  ON Symptom(concept_id);
+CREATE TAG INDEX IF NOT EXISTS idx_disease_name     ON Disease(name);
+CREATE TAG INDEX IF NOT EXISTS idx_test_name        ON Test(name);
+
+
+
+REBUILD TAG INDEX
+  idx_patient_idno,
+  idx_symptom_name,
+  idx_symptom_concept,
+  idx_disease_name,
+  idx_test_name;
