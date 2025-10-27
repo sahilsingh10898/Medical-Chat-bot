@@ -1,9 +1,8 @@
 pandas
 numpy
 tqdm
-transformers
+transformers==4.56.2
 torch
-beautifulsoup4
-huggingface_hub
-scikit-learn
-nebula3-python
+huggingface-hub==0.36.0
+peft==0.17.1
+bitsandbytes==0.48.0
