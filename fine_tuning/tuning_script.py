@@ -2,19 +2,15 @@ import json
 import torch
 import traceback
 import numpy as np
-from transformers import pipeline
+from unsloth import FastLanguageModel, is_bfloat16_supported
+from unsloth import UnslothTrainer, UnslothTrainingArguments
+from transformers import TrainingArguments, EarlyStoppingCallback, Trainer
+from transformers import DataCollatorForSeq2Seq
 from huggingface_hub import login
-from transformers import AutoTokenizer,AutoModelForCausalLM, DataCollatorForSeq2Seq , DataCollatorForLanguageModeling,TrainingArguments,EarlyStoppingCallback,Trainer
 from datasets import load_dataset, DatasetDict
-from transformers import BitsAndBytesConfig
-from peft import get_peft_model, LoraConfig, TaskType
-from peft import prepare_model_for_kbit_training
-
-from fine_tuning.helper import data_handler, train_dataset, test_dataset
-
-
-
-
+from trl import SFTTrainer
+import gc
+from .config import settings
 
 
 class FineTuning:
@@ -27,39 +23,31 @@ class FineTuning:
         self.valid_dataset = None
 
 
-
-    def load_model_and_tokenize(self):
-
-
-        bnb_config = BitsAndBytesConfig(
-            load_in_4bit=True,
-            bnb_4bit_compute_dtype=torch.bfloat16,
-            bnb_4bit_use_double_quant=True,
-            bnb_4bit_quant_type="nf4")
-
-        self.tokenizer = AutoTokenizer.from_pretrained(
-            self.model_name,
-            trust_remote_code=True)
-
-        # we need to define the padding here gemma uses the EOS as pad
-        self.tokenizer.pad_token = self.tokenizer.eos_token
-        self.tokenizer.padding_side ='right'
+    def login_huggingface(self, hf_token=None):
+        try:
+            token_to_use = hf_token or settings.huggingface_token
+            if token_to_use:
+                login(token_to_use)
+                print("Logged in to huggingface successfully")
+            else:
+                raise ValueError("Huggingface token not provided in config.")
+        except Exception as e:
+            print(f"Failed to login to huggingface: {e}")
+            traceback.print_exc()
 
 
-        self.model = AutoModelForCausalLM.from_pretrained(
-            self.model_name,
-            quantization_config=bnb_config,
-            device_map='auto',
-            trust_remote_code=True,
-            low_cpu_mem_usage=True,
-            torch_dtype=torch.bfloat16)
+    def load_model_and_tokenize(self,max_seq=1024):
 
 
-        self.model = prepare_model_for_kbit_training(self.model)
-        self.model.config.use_cache = False # required for gradient checkpoint
+        # use the unsloth to load the model and tokenizer
+        self.model , self.tokenizer = FastLanguageModel.from_pretrained(
+            model_name = self.model_name,
+            max_seq_length = max_seq,
+            dtype = None,
+            load_in_4bit = True # loading the model in 4 bit
 
-        self.model.gradient_checkpointing_enable()
-        print(f"Model and tokenizer loaded successfully")
+        )
+        
 
     def preprocessing_dataset(self):
         """Format dataset with chat template and mask prompt tokens"""
@@ -131,37 +119,59 @@ class FineTuning:
 
     def apply_lora(self):
 
-        peft_config = LoraConfig(
-            task_type=TaskType.CAUSAL_LM,
-            inference_mode=False,
-            r=32,
-            lora_alpha=64,
-            lora_dropout=0.1,
-            target_modules=[
-                "q_proj",
-                "k_proj",
-                "v_proj",
-                "o_proj",
-                "gate_proj",
-                "up_proj",
-                "down_proj"],
+        self.model = FastLanguageModel.get_peft_model(
+            self.model,
+            r=16,
+            lora_alpha=32,
+            target_modules=["q_proj", "k_proj", "v_proj", "o_proj","gate_proj", "up_proj", "down_proj"],
+            lora_dropout=0.05,
             bias="none",
+            use_gradient_checkpointing="unsloth",
+            random_state=42,
+            use_rslora=False,
+            loftq_config=None
+            
         )
-
-        self.model = get_peft_model(self.model, peft_config)
         self.model.print_trainable_parameters()
 
-    def fine_tune(self, epochs=3, lr=2e-4, batch_size=4, grad_accum=8, resume_from_checkpoint=None,max_seq_length=1024):
+    def fine_tune(self, epochs=3, lr=2e-4, batch_size=8, grad_accum=4, resume_from_checkpoint=None,max_seq_length=1024):
+
+        # unsloath specific training args
+        # enable the tf32 datatype
+        torch.backends.cuda.matmul.allow_tf32 = True
+        torch.backends.cudnn.allow_tf32 = True
+
+        # first check wheter we have any checkpoint stored that we can use to run the training
+        # checkpoint_to_resume=None
+
+        # if checkpoint_to_resume:
+        #     checkpoint_to_resume = resume_from_checkpoint
+        #     print(f"resuming from check point {checkpoint_to_resume}")
+        # elif auto_resume:
+
+
+
+
 
 
         effective_batch_size = batch_size * grad_accum
         total_steps = (len(self.train_dataset) // effective_batch_size) * epochs
-
         warmup_steps = min(100, int(total_steps *0.10))
-
         eval_steps = max(50, total_steps // 10)
-
         save_steps = eval_steps
+
+        print(f"\n{'='*60}")
+        print(f"Training Configuration:")
+        print(f"  Total examples: {len(self.train_dataset)}")
+        print(f"  Batch size: {batch_size}")
+        print(f"  Gradient accumulation: {grad_accum}")
+        print(f"  Effective batch size: {effective_batch_size}")
+        print(f"  Total steps: {total_steps}")
+        print(f"  Warmup steps: {warmup_steps}")
+        print(f"  Eval every: {eval_steps} steps")
+        print(f"{'='*60}\n")
+
+
 
         training_args = TrainingArguments(
             output_dir=self.output_dir,
@@ -180,30 +190,37 @@ class FineTuning:
             optim="paged_adamw_8bit",  # Memory efficient optimizer for Colab
 
             # Precision
-            bf16=True,  # Better for Gemma
+            fp16= not is_bfloat16_supported(),
+            bf16=is_bfloat16_supported(),  
 
             # Memory optimizations
             gradient_checkpointing=True,
             max_grad_norm=1.0,  # Gradient clipping for stability
 
             # Logging and saving
-            logging_steps=10,
-            logging_dir=f"{self.output_dir}/logs",
+            logging_steps=5,
+            logging_dir=f"{self.output_dir}/complete_logs",
             save_steps=save_steps,
             save_total_limit=2,  # Keep only 2 checkpoints to save space
 
             # Evaluation
             eval_strategy="steps",
             eval_steps=eval_steps,
+            eval_on_start=False,
             load_best_model_at_end=True,
             metric_for_best_model="eval_loss",
             greater_is_better=False,
 
             # Data handling
-            dataloader_pin_memory=False,  # Can cause issues on Colab
-            dataloader_num_workers=0,  # Safer for Colab
-            remove_unused_columns=True,
+            dataloader_pin_memory=True,  
+            dataloader_num_workers=2,  
+            remove_unused_columns=False,
             seed=42,
+
+            # unsloth specific optimization
+            ddp_find_unused_parameters=False,
+            disable_tqdm=False,
+            report_to="tensorboard",
         )
 
         response_template = "<start_of_turn>model\n"
@@ -224,6 +241,7 @@ class FineTuning:
             eval_dataset=self.valid_dataset,
             tokenizer=self.tokenizer,
             data_collator=data_collator,
+            compute_metrics=None,
             callbacks=[
                 EarlyStoppingCallback(early_stopping_patience=3)
             ]
@@ -247,19 +265,56 @@ class FineTuning:
         print("Fine-tuning complete.")
         self.save_model()
 
+    def compute_metrics(self, eval_pred):
+        """
+        Compute metrics for evaluation
+        Returns perplexity and token accuracy
+        """
+        predictions, labels = eval_pred
+        
+        # Predictions are logits, take argmax to get predicted tokens
+        if isinstance(predictions, tuple):
+            predictions = predictions[0]
+        
+        # Convert logits to predictions
+        predictions = np.argmax(predictions, axis=-1)
+        
+        # Flatten arrays and remove padding (-100 labels)
+        predictions_flat = predictions.flatten()
+        labels_flat = labels.flatten()
+        
+        # Create mask for valid labels (not -100)
+        mask = labels_flat != -100
+        
+        # Filter out padding
+        predictions_valid = predictions_flat[mask]
+        labels_valid = labels_flat[mask]
+        
+        # Calculate token accuracy
+        accuracy = (predictions_valid == labels_valid).mean()
+        
+        # Loss is automatically computed by Trainer
+        # We can access it through eval_pred but it's already tracked
+        
+        return {
+            "accuracy": float(accuracy),
+            # Perplexity will be computed from eval_loss automatically
+        }
+
+
     def save_model(self,trainer=None):
 
-      final_model_path = f"{self.output_dir}/final model"
-      if trainer:
-        trainer.save_model(final_model_path)
-      else:
-        self.model.save_pretrained(final_model_path)
+        final_model_path = f"{self.output_dir}/final model"
+        if trainer:
+            self.model.save_pretrained(final_model_path)
+            self.tokenizer.save_pretrained(final_model_path)
+        else:
+            self.model.save_pretrained(final_model_path)
+            self.tokenizer.save_pretrained(final_model_path)
 
-      # save the tokenizer
-      self.tokenizer.save_pretrained(final_model_path)
-      print(f"Model saved to {final_model_path}")
-      gc.collect()
-      torch.cuda.empty_cache()
+        print(f"Model saved to {final_model_path}")
+        gc.collect()
+        torch.cuda.empty_cache()
 
 
     
