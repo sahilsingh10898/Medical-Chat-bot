@@ -1,5 +1,7 @@
 import json
 import torch
+import os
+import re
 import traceback
 import numpy as np
 from unsloth import FastLanguageModel, is_bfloat16_supported
@@ -315,6 +317,26 @@ class FineTuning:
         print(f"Model saved to {final_model_path}")
         gc.collect()
         torch.cuda.empty_cache()
+
+
+    # lets manually add a method to find the checkpoints and resume the training from there
+    def find_checkpoint(self):
+        if not os.path.exists(self.output_dir):
+            return None
+        checkpoint_dirs = [
+            d for d in os.listdir(self.output_dir)
+            if d.startswith("checkpoint-") and os.path.isdir(os.path.join(self.output_dir, d))
+        ]
+
+        if not checkpoint_dirs:
+            return None
+        # sort them by latest and use that
+        checkpoint_dirs.sort(key=lambda x: int(re.findall(r'\d+', x)[0]))
+        latest_checkpoint = os.path.join(self.output_dir,checkpoint_dirs[-1])
+
+        return latest_checkpoint
+
+
 
 
     

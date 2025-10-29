@@ -24,12 +24,14 @@ def main():
     fine_tuner.preprocessing_dataset()
     # apply the lora
     fine_tuner.apply_lora()
+    latest_checkpoint=fine_tuner.find_checkpoint()
     # setup the trainer
     fine_tuner.fine_tune(
         epochs=3,
-        batch_size=4,
+        batch_size=6,
         lr=2e-4,
-        grad_accum=8
+        grad_accum=5,
+        resume_from_checkpoint=latest_checkpoint
     )
 
 if __name__ == "__main__":
