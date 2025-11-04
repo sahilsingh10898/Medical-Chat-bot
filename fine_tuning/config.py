@@ -11,7 +11,7 @@ class Config(BaseSettings):
 
     model_name: str = Field(default="meta-llama/Llama-3.2-3B-Instruct", env="MODEL_NAME")
     output_dir: str = Field(default=str(Path.home() / "logs"), env="OUTPUT_DIR")
-    dataset_path: Optional[str] = Field(default="/home/ubuntu/DATA/dataset/train_protocol_bot_combined.jsonl", env="DATASET_PATH")
+    dataset_path: Optional[str] = Field(default="/home/ubuntu/DATA/dataset/train_protocol_bot_combined (1).jsonl", env="DATASET_PATH")
     huggingface_token: Optional[str] = Field(default=None, env="HUGGINGFACE_TOKEN")
     hugging_face_api_key: Optional[str] = Field(default=None, env="hugging_face_api_key")
 

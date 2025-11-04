@@ -128,7 +128,7 @@ class FineTuning:
             target_modules=["q_proj", "k_proj", "v_proj", "o_proj","gate_proj", "up_proj", "down_proj"],
             lora_dropout=0.05,
             bias="none",
-            use_gradient_checkpointing="unsloth",
+            use_gradient_checkpointing=True,
             random_state=42,
             use_rslora=False,
             loftq_config=None
@@ -136,7 +136,7 @@ class FineTuning:
         )
         self.model.print_trainable_parameters()
 
-    def fine_tune(self, epochs=3, lr=2e-4, batch_size=8, grad_accum=4, resume_from_checkpoint=None,max_seq_length=1024):
+    def fine_tune(self, epochs=3, lr=1e-4, batch_size=16, grad_accum=2, resume_from_checkpoint=None,max_seq_length=1024):
 
         # unsloath specific training args
         # enable the tf32 datatype
@@ -196,7 +196,7 @@ class FineTuning:
             bf16=is_bfloat16_supported(),  
 
             # Memory optimizations
-            gradient_checkpointing=True,
+            gradient_checkpointing='unsloth',  # Enable gradient checkpointing
             max_grad_norm=1.0,  # Gradient clipping for stability
 
             # Logging and saving
@@ -215,7 +215,7 @@ class FineTuning:
 
             # Data handling
             dataloader_pin_memory=True,  
-            dataloader_num_workers=2,  
+            dataloader_num_workers=16,  
             remove_unused_columns=False,
             seed=42,
 
