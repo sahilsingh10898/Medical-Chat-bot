@@ -136,7 +136,7 @@ class FineTuning:
         )
         self.model.print_trainable_parameters()
 
-    def fine_tune(self, epochs=3, lr=1e-4, batch_size=16, grad_accum=2, resume_from_checkpoint=None,max_seq_length=1024):
+    def fine_tune(self, epochs=3, lr=1e-4, batch_size=8, grad_accum=4, resume_from_checkpoint=None,max_seq_length=1024):
 
         # unsloath specific training args
         # enable the tf32 datatype
@@ -306,7 +306,7 @@ class FineTuning:
 
     def save_model(self,trainer=None):
 
-        final_model_path = f"{self.output_dir}/final model"
+        final_model_path = f"{self.output_dir}/final_model_complete"
         if trainer:
             self.model.save_pretrained(final_model_path)
             self.tokenizer.save_pretrained(final_model_path)
