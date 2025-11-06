@@ -28,9 +28,9 @@ def main():
     # setup the trainer
     fine_tuner.fine_tune(
         epochs=3,
-        batch_size=16,
+        batch_size=8,
         lr=1e-4,
-        grad_accum=2,
+        grad_accum=4,
         resume_from_checkpoint=latest_checkpoint
     )
 

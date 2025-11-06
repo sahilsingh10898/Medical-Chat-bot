@@ -16,10 +16,6 @@ class Config(BaseSettings):
     hugging_face_api_key: Optional[str] = Field(default=None, env="hugging_face_api_key")
 
 
-    # maintain a variable for the LLM provider as i will be experimenting with mutiple LLMs configurations
-    llm_provider: str = Field(default="vllm", env="LLM_PROVIDER")
-
-
     # now for the vLLM settings
     vllm_model :str = Field(default="/home/ubuntu/logs/final model", env="VLLM_MODEL")
     vllm_temp : float = Field(default=0.2 , env="vllm_temp")

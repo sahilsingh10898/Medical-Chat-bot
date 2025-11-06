@@ -3,8 +3,11 @@ from pathlib import Path
 from datasets import load_dataset
 
 from .config import settings
+import logging
 
 
+
+logger = logging.getLogger(__name__)
 DEFAULT_DATASET_PATH = Path(__file__).resolve().parent / "data" / "sample_training.jsonl"
 
 
@@ -31,7 +34,10 @@ class DataHandle:
         self.dataset_path = dataset_path
 
     def create_dataset(self, test_split: float = 0.1, seed: int = 42):
+        
         data_file = self.dataset_path
+        logger.info(f"Loading dataset from {data_file}")
+
         if not data_file.exists():
             raise FileNotFoundError(
                 f"Dataset file not found at {data_file}. "

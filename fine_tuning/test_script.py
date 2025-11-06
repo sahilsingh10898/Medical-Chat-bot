@@ -124,7 +124,9 @@ class ModelTester:
             bp = input("    BP (e.g., 130/80): ").strip()
             temp = input("    Temperature (e.g., 101°F): ").strip()
             hb = input("    Hemoglobin (e.g., 13.5): ").strip()
+            #bp = input("    Diastolic BP (e.g., 80): ").strip()
             spo2 = input("    SpO2 (e.g., 94%): ").strip()
+            rbs = input("    RBS (e.g., 150 mg/dL): ").strip()
             
             pmh = input("  Past Medical History: ").strip()
             if not pmh:
@@ -136,6 +138,8 @@ class ModelTester:
             if temp: vitals['temperature'] = temp
             if hb: vitals['hemoglobin'] = hb
             if spo2: vitals['spo2'] = spo2
+            if rbs: vitals['rbs'] = rbs
+            #if bp: vitals['diastolic_bp'] = bp
             
             # Create patient data
             patient_data = {
@@ -145,14 +149,15 @@ class ModelTester:
                 'vitals': vitals,
                 'past_medical_history': pmh
             }
+            print(patient_data)
             
-            print("\n🤖 Analyzing case...\n")
+            print("\n Analyzing case...\n")
             
             try:
                 response = self.ask_questions(patient_data, system_prompt)
                 
                 print("─"*70)
-                print("📋 PROTOCOL OUTPUT:")
+                print(" PROTOCOL OUTPUT:")
                 print("─"*70)
                 print(response)
                 print("─"*70)
@@ -169,7 +174,7 @@ class ModelTester:
                 results.append(result)
                 
             except Exception as e:
-                print(f"\n❌ Error: {e}")
+                print(f"\n Error: {e}")
                 continue
         
         
@@ -201,9 +206,13 @@ class ModelTester:
             if 'hemoglobin' in vitals or 'hb' in vitals:
                 hb = vitals.get('hemoglobin', vitals.get('hb'))
                 vital_strs.append(f"hemoglobin {hb}")
-            if 'spo2' in vitals or 'oxygen_saturation' in vitals:
-                spo2 = vitals.get('spo2', vitals.get('oxygen_saturation'))
+            if 'spo2' in vitals:
+                spo2 = vitals.get('spo2')
                 vital_strs.append(f"SpO2 {spo2}")
+            if 'rbs' in vitals:
+                vital_strs.append(f"RBS {vitals['rbs']}")
+
+                
         elif isinstance(vitals, str):
             vital_strs.append(vitals)
         
