@@ -21,6 +21,7 @@ class ChatModel(BaseChatModel):
     model_path: str = Field(default=settings.vllm_model)
     temperature: float = Field(default=settings.vllm_temp)
     max_token_limit: int = Field(default=settings.vllm_token_limit)
+    top_p: float = Field(default=settings.vllm_top_p)
 
     # we also need private attributes for the LLM instance
     _llm: LLM = PrivateAttr(default=None) #Loads the actual model into GPU memory, holds model weights and GPU resources
@@ -33,8 +34,8 @@ class ChatModel(BaseChatModel):
         stop = self.stop or ["</s>"]
         # now by default pydantic locks the private attributes of the object so we need to unlock it first
         object.__setattr__(self,"_sampling_params",SamplingParams(
-            temp = self.temperature,
-            max_token = self.max_token_limit,
+            temperature = self.temperature,
+            max_tokens = self.max_token_limit,
             stop = stop
 
         ))
@@ -44,9 +45,63 @@ class ChatModel(BaseChatModel):
 
         ))
         logger.info(f"vLLM model loaded from {self.model_path} into GPU memory.")
-    def _chat_formatting(self,messages : List[Any()]) -> str:
+    def _chat_formatting(self,messages : List[Any]) -> str:
+        """
+
+        Args:
+            messages (List[Any): these messages are in the form of langchain messages and we need to properly format them
+
+        Returns:
+            str: properly formatted string for LLM inferencing
+        """
+
+        return "/n".join(
+            f"user:{msg.content}" if isinstance(msg,HumanMessage) else f"assistant:{msg.content}"
+            for msg in messages
+        )
+
+    def _generate(self,messages : List[Any],stop : Optional[List[Any]]) -> ChatResult:
+        """_summary_
+
+        Args:
+            messages (List[Any]): messages that we will pass to the model for the inferencing 
+            stop (Optional[List[Any]]): allows runtime override of stop tokens for text generation
+
+        Returns:
+            ChatResult: the chat result object that contains generations and other metadata
+        """
+        # first we need to check that the model is initialized or not and it is defensive part 
+        if not isinstance(self._llm,LLM) or not isinstance(self._sampling_params , SamplingParams):
+            self.model_post_init(None)
+
+        # lets convert the messages into the proper string format
+        prompt = self._chat_formatting(messages)
+        # now we can call the model for the inferencing
+        # if there is a custom stop token that we want to use then we will override the default SamplingParams
+
+        if stop:
+            sampling = SamplingParams(
+                temperature = self.temperature,
+                max_tokens = self.max_token_limit,
+                top_p = self.top_p,
+                stop = stop,
+            )
+
+        # now we can pass the prompt to the model for the inferencing
+        results = self._llm.generate([prompt],sampling or self._sampling_params)
+        # the results object contains the generations and other metadata
+        text = results[0].outputs[0].text.strip() if results[0].outputs else ""
+        # now we need to convert the text into the ChatResult format
+        generation = ChatResult(
+            generations=[ChatGeneration(message=AIMessage(content=text))]
+
+        )
+
+        return generation
+
         
-        pass
+        
+
 
     
 
