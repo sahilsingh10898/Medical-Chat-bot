@@ -28,7 +28,7 @@ class LangChainConfig:
     def _config_model(self):
         if self._llm is None:
             try:
-                self._llm = ChatModel(
+                model_init = ChatModel(
                     model = settings.vllm_model,
                     temp = settings.vllm_temp,
                     max_token_limit = settings.vllm_token_limit,
@@ -38,7 +38,10 @@ class LangChainConfig:
             except Exception as e:
                 raise ImportError("failed to import the model check the config") from e
 
-        return self._llm
+            return model_init
+
+        else:
+            return self._llm
 
     def _create_memory(self):
         """
@@ -53,7 +56,9 @@ class LangChainConfig:
         )
         return memory
 
-        
+
+
+langchain_config = LangChainConfig()
 
     
 
