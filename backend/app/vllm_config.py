@@ -41,7 +41,8 @@ class ChatModel(BaseChatModel):
         ))
         object.__setattr__(self,"_llm",LLM(
             model = self.model_path,
-            max_model_len = 8192
+            max_model_len = 8192,
+            tokenizer_mode = "auto"
 
         ))
         logger.info(f"vLLM model loaded from {self.model_path} into GPU memory.")

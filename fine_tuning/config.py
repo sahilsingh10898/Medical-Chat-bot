@@ -24,7 +24,7 @@ class Config(BaseSettings):
     vllm_model :str = Field(default="/home/ubuntu/logs/final model", env="VLLM_MODEL")
     vllm_temp : float = Field(default=0.2 , env="vllm_temp")
     vllm_token_limit : int = Field(default=512 , env = "vllm_token_limit")
-    vllm_top_p : float = Field(default=0.9 , env = "vllm_top_p")
+    vllm_top_p : float = Field(default=0.9 , env="vllm_top_p")
 
 
     def model_post_init(self, __context) -> None:
