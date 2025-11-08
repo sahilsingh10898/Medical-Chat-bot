@@ -2,10 +2,9 @@ import json
 import torch
 import numpy as np
 from tqdm import tqdm
-from transformers import AutoTokenizer, AutoModelForCausalLM
+from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 from collections import defaultdict
 from datetime import datetime
-
 
 
 
@@ -16,16 +15,16 @@ from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
 
 
 class ModelTester:
-    def __init__(self, model_path):
+    def __init__(self, model_path, use_quantization=False):
         """
         Initialize the model tester
-        
+
         Args:
             model_path: Path to the fine-tuned model
-            dataset_path: Path to test dataset
-            output_dir: Directory to save test results
+            use_quantization: Enable 4-bit quantization for faster inference (requires bitsandbytes)
         """
         self.model_path = model_path
+        self.use_quantization = use_quantization
 
         self.tokenizer = None
         self.model = None
@@ -34,21 +33,41 @@ class ModelTester:
         
     def load_model(self):
         """Load the fine-tuned model and tokenizer"""
-        print("Loading model and tokenizer...")
-        
+        print(f"loading the model from the path{self.model_path}")
+
         self.tokenizer = AutoTokenizer.from_pretrained(
             self.model_path,
             trust_remote_code=True
         )
+
+        # Prepare model loading arguments
+        model_kwargs = {
+            'device_map': 'auto',
+            'trust_remote_code': True,
+        }
+
+        # Add quantization config if enabled
+        if self.use_quantization:
+            print("Using 4-bit quantization for faster inference...")
+
+            quantization_config = BitsAndBytesConfig(
+                load_in_4bit=True,
+                bnb_4bit_compute_dtype=torch.bfloat16,
+                bnb_4bit_use_double_quant=True,
+                bnb_4bit_quant_type="nf4"
+            )
+            model_kwargs['quantization_config'] = quantization_config
+        else:
+            model_kwargs['torch_dtype'] = torch.bfloat16
+
         
         self.model = AutoModelForCausalLM.from_pretrained(
             self.model_path,
-            device_map='auto',
-            trust_remote_code=True,
-            torch_dtype=torch.bfloat16
+            **model_kwargs
         )
-        
+
         self.model.eval()
+        self.model = torch.compile(self.model, mode="reduce-overhead")
 
 
     def ask_questions(self, patient_data, system_prompt=None, max_new_tokens=512):
@@ -86,19 +105,19 @@ class ModelTester:
                 **inputs,
                 max_new_tokens=max_new_tokens,
                 temperature=0.2,
-                top_p=0.9,
-                do_sample=True,
-                pad_token_id=self.tokenizer.eos_token_id
+                top_p=None,
+                do_sample=False,
+                pad_token_id=self.tokenizer.eos_token_id,
+                use_cache=True,  
             )
-        # decode the output
-        response = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
 
-        # extract the only assistant's response
-        if "assistant:" in response:
-            response = response.split("assistant:")[-1].strip()
-            response = response.lstrip('\n').strip()
-        else:
-            response = response
+        # Decode only the newly generated tokens (not the input prompt)
+        input_length = inputs['input_ids'].shape[1]
+        generated_tokens = outputs[0][input_length:]
+        response = self.tokenizer.decode(generated_tokens, skip_special_tokens=True)
+
+        # Clean up the response
+        response = response.strip()
 
         
         return response
@@ -230,9 +249,11 @@ class ModelTester:
 
         
 def main():
-    model_path = "/home/ubuntu/logs/final model"
-    
-    tester = ModelTester(model_path)
+    model_path = "/home/ubuntu/logs/final_model_complete"
+
+    # For faster inference, set use_quantization=True
+    # This requires: pip install bitsandbytes
+    tester = ModelTester(model_path, use_quantization=True)
     tester.load_model()
     test_results = tester.generate_responses()
     print(test_results)

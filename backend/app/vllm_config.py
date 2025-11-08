@@ -40,12 +40,13 @@ class ChatModel(BaseChatModel):
 
         ))
         object.__setattr__(self,"_llm",LLM(
-            model = self.model_path,
-            max_model_len = 8192,
-            tokenizer_mode = "auto"
-
+            model=self.model_path,
+            max_model_len=8192,
+            tokenizer_mode="auto"
         ))
+
         logger.info(f"vLLM model loaded from {self.model_path} into GPU memory.")
+        
     def _chat_formatting(self,messages : List[Any]) -> str:
         """
 
@@ -57,7 +58,7 @@ class ChatModel(BaseChatModel):
         """
 
         return "/n".join(
-            f"user:{msg.content}" if isinstance(msg,HumanMessage) else f"assistant:{msg.content}"
+            f"<start_of_turn>user\n{msg.content}<end_of_turn>\n<start_of_turn>model\n"
             for msg in messages
         )
 
