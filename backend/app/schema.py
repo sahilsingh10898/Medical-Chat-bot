@@ -88,6 +88,60 @@ class ValidatePatientData(BaseModel):
                 return f"{match.group(1)}y"
         except ValueError:
             raise ValueError(f"not a valid age {age}")
+
+
+    @field_validator('gender')
+    @classmethod
+    def validate_gender(cls,gender :str) -> str:
+        """
+        we need to make sure that we only take 2 genders male and female
+
+        Args:
+            gender (str): gender of the patient
+
+        Returns:
+            str: properly formatted gender of the patient
+        """
+        gender_norm = gender.strip().lower()
+        
+        allowed = {"male","female"}
+        if gender_norm in allowed:
+            return gender_norm
+
+        raise ValueError(f"not a valid gender {gender}")
+
+    @field_validator('chief_complaint')
+    @classmethod
+    def validate_complain(cls,chief_complaint : str) -> str:
+        # we need to validate that the complaints are not empty and if they are then raise the error
+        comp = chief_complaint.strip().lower()
+        if comp is not None:
+            return comp
+        raise ValueError("symptoms can not be empty")
+
+    
+class ErrorResponse(BaseModel):
+
+    """
+    error response model
+    """
+    error :str = Field(...,description="errors type")
+    detail :str = Field(...,description="detail of the error")
+    timestamp :str = Field(
+        default_factory= lambda : datetime.now().isoformat(),
+        description="time stamp of the error"
+    )
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "error": "ValidationError",
+                "detail": "Chief complaint cannot be empty",
+                "timestamp": "2024-01-15T10:30:00"
+            }
+        }
+    
+
                 
                 
 
