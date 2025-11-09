@@ -13,10 +13,13 @@ we will use 2 classes to perform the data validation
 class VitalsValidation(BaseModel):
 
     bp : Optional[str] = Field(None,description="for giving the bp values")
-    temp : Optional[str] = Field(None,description="for giving the temp values")
-    hemo : Optional[float] = Field(None,description="for giving the hemoglobin values")
+    temperature : Optional[str] = Field(None,description="for giving the temp values")
+    temp : Optional[str] = Field(None,description="for giving the temp values (alias)")
+    hemoglobin : Optional[float] = Field(None,description="for giving the hemoglobin values")
+    hb : Optional[float] = Field(None,description="for giving the hemoglobin values (alias)")
     spo2 : Optional[str] = Field(None,description="for giving the spo2 values")
-    ppbs : Optional[float] = Field(None,description="post pardinal blood sugar values")
+    rbs : Optional[float] = Field(None,description="random blood sugar values")
+    ppbs : Optional[float] = Field(None,description="post prandial blood sugar values (alias)")
 
 
     # for api documentation
@@ -38,12 +41,17 @@ class ValidatePatientData(BaseModel):
     chief_complaint : str = Field(...,description="chief complaints of the patient")
     vitals : Optional[VitalsValidation] = Field(
         default_factory=VitalsValidation,
-        description="vitals of the patienr"
+        description="vitals of the patient"
         )
 
-    history : str = Field(
-        default="No history",
-        description="history of the patient"
+    past_medical_history : str = Field(
+        default="No significant past medical history",
+        description="past medical history of the patient"
+    )
+    # Alias for backwards compatibility
+    history : Optional[str] = Field(
+        default=None,
+        description="history of the patient (alias for past_medical_history)"
     )
 
     """
@@ -81,8 +89,8 @@ class ValidatePatientData(BaseModel):
         if not match:
             raise ValueError("please enter a valid age between 10-70")
         try:
-
-            if int(match.group(1)) <=10 and int(match.group(1)) >=70:
+            age_value = int(match.group(1))
+            if age_value <= 10 or age_value >= 70:
                 raise ValueError("please enter a valid age between 10-70")
             else:
                 return f"{match.group(1)}y"
@@ -118,6 +126,40 @@ class ValidatePatientData(BaseModel):
         if comp is not None:
             return comp
         raise ValueError("symptoms can not be empty")
+
+
+class ProtocolResponse(BaseModel):
+    """Response model for protocol generation"""
+    protocol: str = Field(..., description="Generated medical protocol")
+    patient_summary: Optional[Dict[str, Any]] = Field(
+        None, 
+        description="Summary of input patient data"
+    )
+    metadata: Optional[Dict[str, Any]] = Field(
+        None,
+        description="Additional metadata (inference time, model info, etc.)"
+    )
+    timestamp: str = Field(
+        default_factory=lambda: datetime.now().isoformat(),
+        description="Timestamp of response generation"
+    )
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "protocol": "1. Administer aspirin 325mg...",
+                "patient_summary": {
+                    "age": "65y",
+                    "gender": "male",
+                    "chief_complaint": "Chest pain"
+                },
+                "metadata": {
+                    "inference_time_ms": 1234.5,
+                    "model_version": "gemma-2-9b-it"
+                },
+                "timestamp": "2024-01-15T10:30:00"
+            }
+        }
 
     
 class ErrorResponse(BaseModel):

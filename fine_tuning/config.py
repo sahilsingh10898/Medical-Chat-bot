@@ -26,6 +26,13 @@ class Config(BaseSettings):
     vllm_token_limit : int = Field(default=512 , env = "vllm_token_limit")
     vllm_top_p : float = Field(default=0.9 , env="vllm_top_p")
 
+    # default system prompt
+
+    default_system_prompt : str = Field(default="Analyze the following patient case and output the common protocols.")
+    
+
+
+
 
     def model_post_init(self, __context) -> None:
         if not self.huggingface_token and self.hugging_face_api_key:

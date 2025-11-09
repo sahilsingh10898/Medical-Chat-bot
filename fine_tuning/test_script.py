@@ -32,7 +32,7 @@ class ModelTester:
         self.results = defaultdict(list)
         
     def load_model(self):
-        """Load the fine-tuned model and tokenizer"""
+
         print(f"loading the model from the path{self.model_path}")
 
         self.tokenizer = AutoTokenizer.from_pretrained(
@@ -68,7 +68,6 @@ class ModelTester:
 
         self.model.eval()
         self.model = torch.compile(self.model, mode="reduce-overhead")
-
 
     def ask_questions(self, patient_data, system_prompt=None, max_new_tokens=512):
         # define a chat template
@@ -119,7 +118,6 @@ class ModelTester:
         # Clean up the response
         response = response.strip()
 
-        
         return response
 
     def generate_responses(self, system_prompt=None):
@@ -249,10 +247,8 @@ class ModelTester:
 
         
 def main():
-    model_path = "/home/ubuntu/logs/final_model_complete"
 
-    # For faster inference, set use_quantization=True
-    # This requires: pip install bitsandbytes
+    model_path = "/home/ubuntu/logs/final_model_complete"
     tester = ModelTester(model_path, use_quantization=True)
     tester.load_model()
     test_results = tester.generate_responses()

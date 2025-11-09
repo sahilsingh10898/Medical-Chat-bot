@@ -16,10 +16,20 @@ class Config(BaseSettings):
     hugging_face_api_key: Optional[str] = Field(default=None, env="hugging_face_api_key")
 
 
+    # maintain a variable for the LLM provider as i will be experimenting with mutiple LLMs configurations
+    llm_provider: str = Field(default="vllm", env="LLM_PROVIDER")
+
     # now for the vLLM settings
     vllm_model :str = Field(default="/home/ubuntu/logs/final model", env="VLLM_MODEL")
     vllm_temp : float = Field(default=0.2 , env="vllm_temp")
     vllm_token_limit : int = Field(default=512 , env = "vllm_token_limit")
+    vllm_top_p : float = Field(default=0.9 , env="vllm_top_p")
+
+    # Default system prompt for the medical chatbot
+    default_system_prompt: str = Field(
+        default="Analyze the following patient case and output the common protocols.",
+        env="DEFAULT_SYSTEM_PROMPT"
+    )
 
 
     def model_post_init(self, __context) -> None:
