@@ -123,7 +123,7 @@ class ValidatePatientData(BaseModel):
     def validate_complain(cls,chief_complaint : str) -> str:
         # we need to validate that the complaints are not empty and if they are then raise the error
         comp = chief_complaint.strip().lower()
-        if comp is not None:
+        if comp and len(comp) > 0:
             return comp
         raise ValueError("symptoms can not be empty")
 
