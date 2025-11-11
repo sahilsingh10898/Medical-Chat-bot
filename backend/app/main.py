@@ -5,10 +5,10 @@ import sys
 from contextlib import asynccontextmanager
 from typing import Optional
 
-from langchain_config import langchain_config
-from vllm_config import ChatModel
-import vllm_config
-from schema import ValidatePatientData, ProtocolResponse, ErrorResponse
+from .langchain_config import langchain_config
+from .vllm_config import ChatModel
+from . import vllm_config
+from .schema import ValidatePatientData, ProtocolResponse, ErrorResponse
 from config import settings
 
 
@@ -117,7 +117,7 @@ async def get_health():
         )
 @app.post('/generate-response',response_model=ProtocolResponse)
 async def generate_response(
-    patient_data: ValidatePatientData = Body(...),
+    patient_data: ValidatePatientData = Body(..., embed=True),
     include_input: bool = Body(default=True),
     stop_tokens: Optional[list[str]] = Body(default=None)
 
@@ -156,7 +156,7 @@ async def generate_response(
 
 @app.post('/validate-data')
 async def validate_patientdata(
-    patient_data: ValidatePatientData = Body(...)
+    patient_data: ValidatePatientData = Body(..., embed=True)
 ):
     """
     Validate patient data without generating a protocol
