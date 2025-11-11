@@ -24,7 +24,7 @@ class VitalsValidation(BaseModel):
 
     # for api documentation
     class Config:
-        json_schema_sample = {
+        json_schema_extra = {
             "example":{
                 "bp":"130/80",
                 "temperature": "101°F",
@@ -40,7 +40,7 @@ class ValidatePatientData(BaseModel):
     gender : str = Field(...,description="gender of patient")
     chief_complaint : str = Field(...,description="chief complaints of the patient")
     vitals : Optional[VitalsValidation] = Field(
-        default_factory=VitalsValidation,
+        default=None,
         description="vitals of the patient"
         )
 
