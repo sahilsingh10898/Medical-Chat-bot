@@ -7,6 +7,7 @@ from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.outputs import ChatResult, ChatGeneration
 from vllm import LLM, SamplingParams
 from config import settings
+from transformers import AutoTokenizer
 
 import logging
 logger = logging.getLogger(__name__)
@@ -22,6 +23,7 @@ class ChatModel(BaseChatModel):
     temperature: float = Field(default=settings.vllm_temp)
     max_token_limit: int = Field(default=settings.vllm_token_limit)
     top_p: float = Field(default=settings.vllm_top_p)
+    stop: Optional[List[str]] = Field(default_factory=lambda: ["</s>", "\n\n\n", "Patient:", "CC:", "Protocol?"])
 
     # we also need private attributes for the LLM instance
     _llm: LLM = PrivateAttr(default=None) #Loads the actual model into GPU memory, holds model weights and GPU resources
@@ -33,21 +35,36 @@ class ChatModel(BaseChatModel):
     # these attributes are initialized and checked before the model object is created once this is approved then we move to
     # the initialization of the model
     def model_post_init(self,_context : Any) -> None:
-        from transformers import AutoTokenizer
 
-        stop = self.stop or ["</s>"]
+
+        # we need to be careful of how we are initializing the stop variable because self.stop 
+        # will return a pydantic object and we will get an object not iterable error
+
+        stop = self.stop
+        if stop is None or not isinstance(stop,list):
+            stop = ["</s>", "\n\n\n", "Patient:", "CC:", "Protocol?"]
+
         # now by default pydantic locks the private attributes of the object so we need to unlock it first
         object.__setattr__(self,"_sampling_params",SamplingParams(
             temperature = self.temperature,
             max_tokens = self.max_token_limit,
             top_p = self.top_p,
-            stop = stop
+            stop = stop,
+            repetition_penalty = 1.15,  # Prevent repetitive outputs
+            frequency_penalty = 0.3,    # Reduce token frequency repetition
+            presence_penalty = 0.2      # Encourage topic diversity
 
         ))
         object.__setattr__(self,"_llm",LLM(
             model=self.model_path,
-            max_model_len=8192,
-            tokenizer_mode="auto"
+            max_model_len=2048,  # Reduced from 4096 for faster loading and inference
+            tokenizer_mode="auto",
+            gpu_memory_utilization=0.90,  # Increased to 90% for better performance
+            trust_remote_code=True,
+            dtype="float16",  # Use fp16 for better memory efficiency
+            enforce_eager=False,  # Use CUDA graphs for faster inference
+            enable_prefix_caching=True,  # Cache common prefixes (system prompts)
+            disable_log_stats=True  # Reduce logging overhead
         ))
 
         # Initialize tokenizer for chat template formatting
@@ -123,6 +140,9 @@ class ChatModel(BaseChatModel):
                 max_tokens = self.max_token_limit,
                 top_p = self.top_p,
                 stop = stop,
+                repetition_penalty = 1.15,
+                frequency_penalty = 0.3,
+                presence_penalty = 0.2
             )
         else:
             sampling_params = self._sampling_params
