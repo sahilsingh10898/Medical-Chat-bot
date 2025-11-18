@@ -1,3 +1,4 @@
 {
-    "claudeCode.useTerminal": true
+    "claudeCode.useTerminal": true,
+    "postman.settings.dotenv-detection-notification-visibility": false
 }

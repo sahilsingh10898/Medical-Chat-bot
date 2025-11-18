@@ -1,12 +1,20 @@
 # langchain_congig.py
 
 import os
+import sys
 import time
+from pathlib import Path
 from typing import Optional, Dict, Any, List
 from datetime import datetime
 import logging
 from langchain.memory import ConversationBufferMemory
 from langchain_community.cache import InMemoryCache
+
+# Add project root to Python path to allow imports from config.py
+project_root = Path(__file__).resolve().parent.parent.parent
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+
 from config import settings
 from .vllm_config import ChatModel
 from .patient_data import PatientDataFormat

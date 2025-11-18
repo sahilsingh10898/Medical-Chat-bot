@@ -22,7 +22,7 @@ class Config(BaseSettings):
     llm_provider: str = Field(default="vllm", env="LLM_PROVIDER")
 
     # now for the vLLM settings
-    vllm_model :str = Field(default="/home/ubuntu/logs/merged_model", env="VLLM_MODEL")
+    vllm_model :str = Field(default="/home/ubuntu/logs/quantized_awq_model", env="VLLM_MODEL")
     vllm_temp : float = Field(default=0.2 , env="vllm_temp")
     vllm_token_limit : int = Field(default=384 , env = "vllm_token_limit")  # Reduced from 512 for faster inference
     vllm_top_p : float = Field(default=0.9 , env="vllm_top_p")

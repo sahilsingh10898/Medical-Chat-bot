@@ -1,13 +1,19 @@
-
-
+import sys
+from pathlib import Path
 from typing import List, Optional, Any
 from pydantic import PrivateAttr, Field
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.outputs import ChatResult, ChatGeneration
 from vllm import LLM, SamplingParams
-from config import settings
 from transformers import AutoTokenizer
+
+# Add project root to Python path to allow imports from config.py
+project_root = Path(__file__).resolve().parent.parent.parent
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+
+from config import settings
 
 import logging
 logger = logging.getLogger(__name__)
@@ -58,11 +64,13 @@ class ChatModel(BaseChatModel):
         object.__setattr__(self,"_llm",LLM(
             model=self.model_path,
             max_model_len=2048,  # Reduced from 4096 for faster loading and inference
+            max_num_seqs=16,  # Limit concurrent sequences to reduce memory usage
             tokenizer_mode="auto",
-            gpu_memory_utilization=0.90,  # Increased to 90% for better performance
+            gpu_memory_utilization=0.75,  # Reduced from 90% for more stable initialization
             trust_remote_code=True,
-            dtype="float16",  # Use fp16 for better memory efficiency
-            enforce_eager=False,  # Use CUDA graphs for faster inference
+            dtype="auto",  # Let vLLM auto-detect dtype (will use float16 for AWQ models)
+            quantization="awq",  # Explicitly specify AWQ quantization
+            enforce_eager=True,  # Disable CUDA graphs to reduce memory overhead during init
             enable_prefix_caching=True,  # Cache common prefixes (system prompts)
             disable_log_stats=True  # Reduce logging overhead
         ))

@@ -2,14 +2,20 @@
 
 import logging
 import sys
+from pathlib import Path
 from contextlib import asynccontextmanager
 from typing import Optional
 
+# Add project root to Python path to allow imports from config.py
+project_root = Path(__file__).resolve().parent.parent.parent
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+
+from config import settings
 from .langchain_config import langchain_config
 from .vllm_config import ChatModel
 from . import vllm_config
 from .schema import ValidatePatientData, ProtocolResponse, ErrorResponse
-from config import settings
 
 
 from fastapi import FastAPI, HTTPException, Request, Body
