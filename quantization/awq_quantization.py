@@ -1,25 +1,21 @@
 import json
 import logging
 import random
+import sys
+
 from pathlib import Path
 from typing import List, Dict, Any
 from dataclasses import dataclass
 import torch
 from transformers import AutoTokenizer
-#from awq.quantize.quantizer import AWQQuantizer
 from awq import AutoAWQForCausalLM
 
-# Handle both relative and absolute imports
-try:
-    from .config import settings
-except ImportError:
-    import sys
-    from pathlib import Path
-    # Add parent directory to path for standalone execution
-    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-    from config import settings
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from config import settings
 
 
+    
 
 logger = logging.getLogger(__name__)
 
